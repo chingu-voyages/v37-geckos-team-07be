@@ -67,6 +67,7 @@ router.post('/categories', async (req, res, next) => {
 		await Movement.aggregate([
 			{
 				$match: {
+					userId: ObjectId(req.body.userId),
 					isIncome: true
 				}
 			},
@@ -119,6 +120,7 @@ router.post('/categories', async (req, res, next) => {
 		await Movement.aggregate([
 			{
 				$match: {
+					userId: ObjectId(req.body.userId),
 					isIncome: false
 				}
 			},
