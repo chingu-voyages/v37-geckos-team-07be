@@ -8,7 +8,6 @@ const movementSchema = new Schema(
 		userId: { type: ObjectId, required: true },
 		amount: { type: Decimal128, required: true },
 		category: { type: String, required: true },
-		date: { type: Date, required: true },
 		description: { type: String, required: true },
 		isIncome: { type: Boolean, required: true }
 	},
