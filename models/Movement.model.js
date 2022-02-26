@@ -1,5 +1,6 @@
 const { Schema, model } = require('mongoose');
 const ObjectId = Schema.Types.ObjectId;
+const Decimal128 = Schema.Types.Decimal128;
 
 // TODO: Please edit the user model to whatever makes sense for our project
 const movementSchema = new Schema(
