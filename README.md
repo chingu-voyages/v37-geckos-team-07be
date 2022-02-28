@@ -46,6 +46,16 @@ the methods under the /API/ routes are:
 - [POST /updateMovement](#updatemovement)
 - [POST /categories](#categories)
 
+| HTTP Method | URL               | Request Body                                                  | Success status | Error Status | Description                                                                                                                                        |
+| ----------- | ----------------- | ------------------------------------------------------------- | -------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET         | `/sampleData`     | empty                                                         | 200            | 404          | returns an object with user and movements data of a sample user (Galileo Galilei). the result is an object with two properties: user and movements |
+| GET         | `/userData`       | {userId}                                                      | 200            | 404          | returns the corrisponding user document                                                                                                            |
+| GET         | `/movementsData`  | {userId}                                                      | 200            | 404          | returns an array with the movements' documents of the corresponding user                                                                           |
+| POST        | `/addMovement`    | {userId, amount, category, description, isIncome}             | 201            | 500          | adds a movement with the specified characteristics                                                                                                 |
+| PUT         | `/updateMovement` | {movementId, userId, amount, category, description, isIncome} | 200            | 404/500      | updates a movement with new data                                                                                                                   |
+| GET         | `/categories`     | {userId}                                                      | 200            | 404          | returns a list of categories used by the user with some basic statistic data.                                                                      |
+| POST        | `/deleteMovement` | {id}                                                          | 200            | 500          | delete the movement with the specified id                                                                                                          |
+
 ### sampleData
 
 #### GET
