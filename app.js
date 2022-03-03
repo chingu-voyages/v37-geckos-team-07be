@@ -19,7 +19,7 @@ require('./config')(app);
 // 👇 Start handling routes here
 // Contrary to the views version, all routes are controlled from the routes/index.js
 const allRoutes = require('./routes/index.routes');
-app.use('/api', allRoutes);
+app.use('/api', isAuthenticated, allRoutes);
 
 const authRouter = require('./routes/auth.routes');
 app.use('/auth', authRouter);
