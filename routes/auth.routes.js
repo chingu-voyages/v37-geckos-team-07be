@@ -8,12 +8,13 @@ const { isAuthenticated } = require('./../middleware/jwt.middleware.js');
 const router = express.Router();
 const saltRounds = 10;
 
+/* ------- SIGNUP ---------- */
 // POST /auth/signup  - Creates a new user in the database
 router.post('/signup', (req, res, next) => {
-  const { email, password, name } = req.body;
+  const { username, email, password } = req.body;
 
   // Check if email or password or name are provided as empty string
-  if (email === '' || password === '' || name === '') {
+  if (email === '' || password === '' || username === '') {
     res.status(400).json({ message: 'Provide email, password and name' });
     return;
   }
@@ -50,15 +51,15 @@ router.post('/signup', (req, res, next) => {
 
       // Create the new user in the database
       // We return a pending promise, which allows us to chain another `then`
-      return User.create({ email, password: hashedPassword, name });
+      return User.create({ email, password: hashedPassword, username });
     })
     .then(createdUser => {
       // Deconstruct the newly created user object to omit the password
       // We should never expose passwords publicly
-      const { email, name, _id } = createdUser;
+      const { email, username, _id } = createdUser;
 
       // Create a new object that doesn't expose the password
-      const user = { email, name, _id };
+      const user = { email, username, _id };
 
       // Send a json response containing the user object
       res.status(201).json({ user: user });
@@ -68,6 +69,8 @@ router.post('/signup', (req, res, next) => {
       res.status(500).json({ message: 'Internal Server Error' });
     });
 });
+
+/* ------------ LOGIN ------------ */
 
 // POST  /auth/login - Verifies email and password and returns a JWT
 router.post('/login', (req, res, next) => {
@@ -93,10 +96,10 @@ router.post('/login', (req, res, next) => {
 
       if (passwordCorrect) {
         // Deconstruct the user object to omit the password
-        const { _id, email, name } = foundUser;
+        const { _id, email, username } = foundUser;
 
         // Create an object that will be set as the token payload
-        const payload = { _id, email, name };
+        const payload = { _id, email, username };
 
         // Create and sign the token
         const authToken = jwt.sign(payload, process.env.TOKEN_SECRET, {
@@ -113,7 +116,7 @@ router.post('/login', (req, res, next) => {
     .catch(err => res.status(500).json({ message: 'Internal Server Error' }));
 });
 
-// GET  /auth/verify  -  Used to verify JWT stored on the client
+// GET  /auth/verify  -  (route for integration with the React app) Used to verify JWT stored on the client
 router.get('/verify', isAuthenticated, (req, res, next) => {
   // If JWT token is valid the payload gets decoded by the
   // isAuthenticated middleware and made available on `req.payload`

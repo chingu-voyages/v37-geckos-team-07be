@@ -35,28 +35,36 @@ A movement document looks like this:
 }
 ```
 
-## /API/
+### API Documentation
 
 the methods under the /API/ routes are:
 
-- [GET /sampleData](#sampledata)
-- [POST /userData](#userdata)
-- [POST /movementsData](#movementsdata)
-- [POST /addMovement](#addmovement)
-- [POST /updateMovement](#updatemovement)
-- [POST /categories](#categories)
+- [MongoDB](#mongodb)
+  - [API Documentation](#api-documentation)
+      - [Project routes](#project-routes)
+    - [GET](#get)
+  - [userData](#userdata)
+    - [POST](#post)
+  - [movementsData](#movementsdata)
+    - [POST](#post-1)
+  - [addMovement](#addmovement)
+    - [POST](#post-2)
+  - [updateMovement](#updatemovement)
+    - [POST](#post-3)
+  - [categories](#categories)
+    - [POST](#post-4)
 
-| HTTP Method | URL               | Request Body                                                  | Success status | Error Status | Description                                                                                                                                        |
-| ----------- | ----------------- | ------------------------------------------------------------- | -------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET         | `/sampleData`     | empty                                                         | 200            | 404          | returns an object with user and movements data of a sample user (Galileo Galilei). the result is an object with two properties: user and movements |
-| GET         | `/userData`       | {userId}                                                      | 200            | 404          | returns the corrisponding user document                                                                                                            |
-| GET         | `/movementsData`  | {userId}                                                      | 200            | 404          | returns an array with the movements' documents of the corresponding user                                                                           |
-| POST        | `/addMovement`    | {userId, amount, category, description, isIncome}             | 201            | 500          | adds a movement with the specified characteristics                                                                                                 |
-| PUT         | `/updateMovement` | {movementId, userId, amount, category, description, isIncome} | 200            | 404/500      | updates a movement with new data                                                                                                                   |
-| GET         | `/categories`     | {userId}                                                      | 200            | 404          | returns a list of categories used by the user with some basic statistic data.                                                                      |
-| POST        | `/deleteMovement` | {id}                                                          | 200            | 500          | delete the movement with the specified id                                                                                                          |
+##### Project routes
 
-### sampleData
+| HTTP verb | URL                  | Request body | Action                         |
+| --------- | -------------------- | ------------ | ------------------------------ |
+| GET       | `/api/movements`     | (empty)      | Returns all the movements      |
+| POST      | `/api/movements`     | JSON         | Create a new movement          |
+| GET       | `/api/movements/:id` | (empty)      | Returns the specified movement |
+| PUT       | `/api/movements/:id` | JSON         | Edits the specified movement   |
+| DELETE    | `/api/movements/:id` | (empty)      | Deletes the specified movement |
+
+///////////////////////////////////////////
 
 #### GET
 
