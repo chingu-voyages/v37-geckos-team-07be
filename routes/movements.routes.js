@@ -59,23 +59,25 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-///////////////////////////////////////////////////////////
 // @desc    Retrieves a specific movement
 // @route   GET /api/movements/:id
 // @access  Private
-// router.get('/:id', (req, res, next) => {
-//   const { id } = req.params;
+router.get('/:id', (req, res, next) => {
+  const { id } = req.params;
 
-//   if (!mongoose.Types.ObjectId.isValid(id)) {
-//     res.status(400).json({ message: 'Specified id is not valid' });
-//     return;
-//   }
-
-//   Project.findById(projectId)
-//     .populate('tasks')
-//     .then(project => res.status(200).json(project))
-//     .catch(error => res.json(error));
-// });
+  Movement.findById(id)
+    .then(modifiedMovement => {
+      if (!!modifiedMovement) {
+        res.status(201).json(modifiedMovement);
+      } else {
+        res.status(404).json({ message: "couldn't find movement" });
+      }
+    })
+    .catch(err => {
+      console.log(err);
+      res.status(500).json({ message: "couldn't modify the movement" });
+    });
+});
 
 // @desc    Update an existing movement
 // @route   PUT /api/movements/:id
@@ -85,13 +87,13 @@ router.put('/:id', async (req, res, next) => {
     req.body;
 
   return Movement.findOneAndUpdate(
-    { _id: movementId },
+    { id: movementId },
     {
-      userId: userId,
-      amount: amount,
-      category: category,
-      description: description,
-      isIncome: isIncome,
+      userId,
+      amount,
+      category,
+      description,
+      isIncome,
     },
     { new: true }
   )
@@ -107,8 +109,6 @@ router.put('/:id', async (req, res, next) => {
       res.status(500).json({ message: "couldn't modify the movement" });
     });
 });
-
-//////////////////////////////////////////////////////////
 
 // @desc    Delete transaction
 // @route   DELETE /api/movements/:id
@@ -135,6 +135,149 @@ router.delete('/:id', async (req, res, next) => {
       success: false,
       error: 'Server Error',
     });
+  }
+});
+
+//////////////////////////////////////////////////////////////////////
+//TODO//TODO//TODO///
+/* GET Get categories and some stats of them from user _id */
+router.get('/categories', async (req, res, next) => {
+  try {
+    //List all the categories ever used by the user
+    const allCategories = await Movement.aggregate([
+      {
+        $match: {
+          userId: ObjectId(req.body.userId),
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          category: 1,
+        },
+      },
+      {
+        $group: {
+          _id: '$category',
+        },
+      },
+    ]);
+    // Calculate the amount total amount of income movements
+    const totalIncomeAmount = (
+      await Movement.aggregate([
+        {
+          $match: {
+            userId: ObjectId(req.body.userId),
+            isIncome: true,
+          },
+        },
+        {
+          $project: {
+            amount: 1,
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalIncomeAmount: { $sum: '$amount' },
+          },
+        },
+      ])
+    )[0].totalIncomeAmount;
+
+    // get the categories if income movements with some stats:
+    //number of movements, amount sum for category and pecentage rate on total amount
+    const incomeCategories = await Movement.aggregate([
+      {
+        $match: {
+          userId: ObjectId(req.body.userId),
+          isIncome: true,
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          category: 1,
+          amount: 1,
+        },
+      },
+      {
+        $group: {
+          _id: '$category',
+          movementCount: { $sum: 1 },
+          totalCategoryAmount: { $sum: '$amount' },
+        },
+      },
+      {
+        $addFields: {
+          categoryRate: {
+            $divide: ['$totalCategoryAmount', totalIncomeAmount],
+          },
+        },
+      },
+    ]);
+
+    //calculate the total amount of expenses movements
+    const totalExpenseAmount = (
+      await Movement.aggregate([
+        {
+          $match: {
+            userId: ObjectId(req.body.userId),
+            isIncome: false,
+          },
+        },
+        {
+          $project: {
+            amount: 1,
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalExpenseAmount: { $sum: '$amount' },
+          },
+        },
+      ])
+    )[0].totalExpenseAmount;
+
+    // get the categories if expense movements with some stats:
+    //number of movements, amount sum for category and pecentage rate on total amount
+    const expenseCategories = await Movement.aggregate([
+      {
+        $match: {
+          userId: ObjectId(req.body.userId),
+          isIncome: false,
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          category: 1,
+          amount: 1,
+        },
+      },
+      {
+        $group: {
+          _id: '$category',
+          movementCount: { $sum: 1 },
+          totalCategoryAmount: { $sum: '$amount' },
+        },
+      },
+      {
+        $addFields: {
+          categoryRate: {
+            $divide: ['$totalCategoryAmount', totalExpenseAmount],
+          },
+        },
+      },
+    ]);
+
+    res
+      .status(200)
+      .json({ allCategories, incomeCategories, expenseCategories });
+  } catch (err) {
+    console.log(err);
+    res.status(404);
   }
 });
 
