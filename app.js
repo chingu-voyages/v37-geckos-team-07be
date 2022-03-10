@@ -20,7 +20,7 @@ require('./config')(app);
 
 const allRoutes = require('./routes/movements.routes');
 // whenever I make a request to:
-app.use('/api/movements', allRoutes);
+app.use('/api/movements', isAuthenticated, allRoutes);
 // it routes to movements.routes.js => (router.get('/')
 
 const authRouter = require('./routes/auth.routes');

@@ -153,9 +153,11 @@ router.get('/categories', async (req, res, next) => {
 // @access  Private
 /* GET movements ('/api/movements'); */
 router.get('/', async (req, res, next) => {
+  console.log(req.payload._id);
+  console.log(req.body.userId);
   try {
     const movements = await Movement.find({
-      userId: ObjectId(req.body.userId),
+      userId: ObjectId(req.payload._id),
     });
 
     res.json(movements);
