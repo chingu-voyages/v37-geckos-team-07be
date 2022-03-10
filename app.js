@@ -17,9 +17,11 @@ const app = express();
 require('./config')(app);
 
 // 👇 Start handling routes here
-// Contrary to the views version, all routes are controlled from the routes/index.js
-const allRoutes = require('./routes/index.routes');
-app.use('/api', isAuthenticated, allRoutes);
+
+const allRoutes = require('./routes/movements.routes');
+// whenever I make a request to:
+app.use('/api/movements', isAuthenticated, allRoutes);
+// it routes to movements.routes.js => (router.get('/')
 
 const authRouter = require('./routes/auth.routes');
 app.use('/auth', authRouter);

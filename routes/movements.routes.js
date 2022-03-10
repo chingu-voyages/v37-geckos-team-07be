@@ -2,67 +2,13 @@ const User = require('../models/User.model');
 const Movement = require('../models/Movement.model');
 const router = require('express').Router();
 const { ObjectId } = require('mongodb');
-const { isAuthenticated } = require('./../middleware/jwt.middleware.js');
+const { isAuthenticated } = require('../middleware/jwt.middleware.js');
 
-/* GET home page */
-router.get('/', async (req, res, next) => {
-  res.json('All good in here');
-});
-
-/* GET Sample user data */
-router.get('/sampleData', isAuthenticated, async (req, res, next) => {
-  try {
-    const user = await User.findOne({
-      _id: ObjectId('62154c056065f32a2bdd0aab'),
-    });
-
-    const movements = await Movement.find({
-      userId: ObjectId('62154c056065f32a2bdd0aab'),
-    });
-
-    res.status(200).json({
-      user,
-      movements,
-    });
-  } catch (err) {
-    console.log(err);
-    res.status(404);
-  }
-});
-
-/* GET Get User data from user _id */
-router.get('/userData/:id', isAuthenticated, async (req, res, next) => {
-  // const { userId } = req.body;
-  // const userId = req.params.id;
-  const userId = '';
-  try {
-    const user = await User.findOne({
-      _id: ObjectId(userId),
-    });
-
-    res.json(user);
-  } catch (err) {
-    console.log(err);
-    req.status(404);
-  }
-});
-
-/* GET Get Movement data from user _id */
-router.get('/movementsData', isAuthenticated, async (req, res, next) => {
-  try {
-    const movements = await Movement.find({
-      userId: ObjectId(req.body.userId),
-    });
-
-    res.json(movements);
-  } catch (err) {
-    console.log(err);
-    res.status(404);
-  }
-});
-
-/* GET Get categories and some stats of them from user _id */
-router.get('/categories', isAuthenticated, async (req, res, next) => {
+//TODO//TODO//TODO///
+// @desc    retrieve categories and some stats from user _id
+// @route   GET /api/movements/categories
+// @access  Private
+router.get('/categories', async (req, res, next) => {
   try {
     //List all the categories ever used by the user
     const allCategories = await Movement.aggregate([
@@ -202,33 +148,98 @@ router.get('/categories', isAuthenticated, async (req, res, next) => {
   }
 });
 
-/* POST add new movement */
-router.post('/addMovement', isAuthenticated, (req, res, next) => {
-  const { userId, amount, category, description, isIncome } = req.body;
+// @desc    Get all transactions
+// @route   GET /api/movements
+// @access  Private
+/* GET movements ('/api/movements'); */
+router.get('/', async (req, res, next) => {
+  console.log(req.payload._id);
+  console.log(req.body.userId);
+  try {
+    const movements = await Movement.find({
+      userId: ObjectId(req.payload._id),
+    });
 
-  return Movement.create({ userId, amount, category, description, isIncome })
-    .then(newMovement => {
-      res.status(201).json(newMovement);
+    res.json(movements);
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: 'Server Error',
+    });
+  }
+});
+
+// @desc    Add a new movement
+// @route   POST /api/movements
+// @access  Private
+router.post('/', async (req, res, next) => {
+  try {
+    const { userId, amount, category, description, isIncome } = req.body;
+
+    const movements = await Movement.create({
+      userId,
+      amount,
+      category,
+      description,
+      isIncome,
+    });
+
+    return res.status(201).json({
+      success: true,
+      data: movements,
+    });
+  } catch (err) {
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(val => val.message);
+
+      return res.status(400).json({
+        success: false,
+        error: messages,
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        error: 'Server Error',
+      });
+    }
+  }
+});
+
+// @desc    Retrieves a specific movement
+// @route   GET /api/movements/:id
+// @access  Private
+router.get('/:id', (req, res, next) => {
+  const { id } = req.params;
+
+  Movement.findById(id)
+    .then(modifiedMovement => {
+      if (!!modifiedMovement) {
+        res.status(201).json(modifiedMovement);
+      } else {
+        res.status(404).json({ message: "couldn't find movement" });
+      }
     })
     .catch(err => {
       console.log(err);
-      res.status(500).json({ message: "couldn't add the movement" });
+      res.status(500).json({ message: "couldn't modify the movement" });
     });
 });
 
-/* PUT update existing movement */
-router.put('/updateMovement', isAuthenticated, async (req, res, next) => {
+// @desc    Update an existing movement
+// @route   PUT /api/movements/:id
+// @access  Private
+router.put('/:id', async (req, res, next) => {
   const { movementId, userId, amount, category, description, isIncome } =
     req.body;
 
   return Movement.findOneAndUpdate(
-    { _id: movementId },
+    { id: movementId },
     {
-      userId: userId,
-      amount: amount,
-      category: category,
-      description: description,
-      isIncome: isIncome,
+      userId,
+      amount,
+      category,
+      description,
+      isIncome,
     },
     { new: true }
   )
@@ -245,22 +256,34 @@ router.put('/updateMovement', isAuthenticated, async (req, res, next) => {
     });
 });
 
-// router.get('/movements', isAuthenticated, async (req, res) => {}
-// router.get('/movements/:id', isAuthenticated, async (req, res) => {}
-// router.post('/movements', isAuthenticated, async (req, res) => {}
-// router.delete('/movements/:id', isAuthenticated, async (req, res) => {}
-// router.update('/movements/:id', isAuthenticated, async (req, res) => {}
+// @desc    Delete transaction
+// @route   DELETE /api/movements/:id
+// @access  Private
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const movement = await Movement.findById(req.params.id);
 
-router.post('/deleteMovement', isAuthenticated, async (req, res) => {
-  console.log(req.body);
-  return Movement.findOneAndDelete({ _id: req.body.id })
-    .then(deletedMovement => {
-      res.status(200).json(deletedMovement);
-    })
-    .catch(err => {
-      console.log(err);
-      res.status(500).json({ message: "couldn't delete movement" });
+    if (!movement) {
+      return res.status(404).json({
+        success: false,
+        error: 'No movement found',
+      });
+    }
+
+    await movement.remove();
+
+    return res.status(200).json({
+      success: true,
+      data: {},
     });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: 'Server Error',
+    });
+  }
 });
+
+//////////////////////////////////////////////////////////////////////
 
 module.exports = router;
