@@ -10,14 +10,11 @@ const movementSchema = new Schema(
     category: { type: String, required: true },
     description: { type: String, required: true },
     isIncome: { type: Boolean, required: true },
-  },
-  {
-    // this second object adds extra properties: `createdAt` and `updatedAt`
     createdAt: {
       type: Date,
       default: Date.now,
     },
-  }
+  },
 );
 
 const Movement = model('Movement', movementSchema);
