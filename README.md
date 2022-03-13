@@ -42,9 +42,6 @@ We will start our project by first documenting all of the routes and data models
     category: { type: String, required: true },
     description: { type: String, required: true },
     isIncome: { type: Boolean, required: true },
-  },
-  {
-    // this second object adds extra properties: `createdAt` and `updatedAt`
     createdAt: {
       type: Date,
       default: Date.now,
