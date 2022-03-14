@@ -174,7 +174,8 @@ router.get('/', async (req, res, next) => {
 // @access  Private
 router.post('/', async (req, res, next) => {
   try {
-    const { userId, amount, category, description, isIncome } = req.body;
+    const { amount, category, description, isIncome } = req.body;
+    const userId = req.payload._id;
 
     const movements = await Movement.create({
       userId,
