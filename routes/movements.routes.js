@@ -1,8 +1,11 @@
+const router = require('express').Router();
+const authRoutes = require('./auth.routes');
+
 const User = require('../models/User.model');
 const Movement = require('../models/Movement.model');
-const router = require('express').Router();
 const { ObjectId } = require('mongodb');
-const { isAuthenticated } = require('../middleware/jwt.middleware.js');
+
+router.use('/auth', authRoutes);
 
 //TODO//TODO//TODO///
 // @desc    retrieve categories and some stats from user _id
@@ -50,7 +53,7 @@ router.get('/categories', async (req, res, next) => {
           },
         },
       ])
-    )[0].totalIncomeAmount;
+    )[0];
 
     // get the categories if income movements with some stats:
     //number of movements, amount sum for category and pecentage rate on total amount
@@ -105,7 +108,7 @@ router.get('/categories', async (req, res, next) => {
           },
         },
       ])
-    )[0].totalExpenseAmount;
+    )[0];
 
     // get the categories if expense movements with some stats:
     //number of movements, amount sum for category and pecentage rate on total amount
@@ -147,6 +150,7 @@ router.get('/categories', async (req, res, next) => {
     res.status(404);
   }
 });
+//////////////////////////////////////////////////////////
 
 // @desc    Get all transactions
 // @route   GET /api/movements
@@ -212,9 +216,9 @@ router.get('/:id', (req, res, next) => {
   const { id } = req.params;
 
   Movement.findById(id)
-    .then(modifiedMovement => {
-      if (!!modifiedMovement) {
-        res.status(201).json(modifiedMovement);
+    .then(movement => {
+      if (!!movement) {
+        res.status(201).json(movement);
       } else {
         res.status(404).json({ message: "couldn't find movement" });
       }

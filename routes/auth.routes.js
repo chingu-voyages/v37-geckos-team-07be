@@ -1,16 +1,42 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User.model');
 
-const { isAuthenticated } = require('./../middleware/jwt.middleware.js');
+// ℹ️ Handles password encryption
+const bcrypt = require('bcryptjs');
+const mongoose = require('mongoose');
+
+// Require the User model in order to interact with the database
+const User = require('../models/User.model');
+const Session = require('../models/Session.model');
+
+// Require necessary (isLoggedOut and isLiggedIn) middleware in order to control access to specific routes
+const isLoggedOut = require('../middleware/isLoggedOut');
+const isLoggedIn = require('../middleware/isLoggedIn');
 
 const router = express.Router();
 const saltRounds = 10;
 
+router.get('/session', (req, res) => {
+  // we don't want to throw an error, and just maintain the user as null
+  if (!req.headers.authorization) {
+    return res.json(null);
+  }
+
+  // accessToken is being sent on every request in the headers
+  const accessToken = req.headers.authorization;
+
+  Session.findById(accessToken)
+    .populate('user')
+    .then(session => {
+      if (!session) {
+        return res.status(404).json({ errorMessage: 'Session does not exist' });
+      }
+      return res.status(200).json(session);
+    });
+});
+
 /* ------- SIGNUP ---------- */
 // POST /auth/signup  - Creates a new user in the database
-router.post('/signup', (req, res, next) => {
+router.post('/signup', isLoggedOut, (req, res, next) => {
   const { username, email, password } = req.body;
 
   // Check if email or password or name are provided as empty string
@@ -37,94 +63,107 @@ router.post('/signup', (req, res, next) => {
   }
 
   // Check the users collection if a user with the same email already exists
-  User.findOne({ email })
-    .then(foundUser => {
-      // If the user with the same email already exists, send an error response
-      if (foundUser) {
-        res.status(400).json({ message: 'User already exists.' });
-        return;
-      }
+  User.findOne({ email }).then(foundUser => {
+    // If the user with the same email already exists, send an error response
+    if (foundUser) {
+      res.status(400).json({ message: 'User already exists.' });
+      return;
+    }
 
-      // If email is unique, proceed to hash the password
-      const salt = bcrypt.genSaltSync(saltRounds);
-      const hashedPassword = bcrypt.hashSync(password, salt);
-
-      // Create the new user in the database
-      // We return a pending promise, which allows us to chain another `then`
-      return User.create({ email, password: hashedPassword, username });
-    })
-    .then(createdUser => {
-      // Deconstruct the newly created user object to omit the password
-      // We should never expose passwords publicly
-      const { email, username, _id } = createdUser;
-
-      // Create a new object that doesn't expose the password
-      const user = { email, username, _id };
-
-      // Send a json response containing the user object
-      res.status(201).json({ user: user });
-    })
-    .catch(err => {
-      console.log(err);
-      res.status(500).json({ message: 'Internal Server Error' });
-    });
+    // If email is unique, proceed to hash the password
+    return bcrypt
+      .genSalt(saltRounds)
+      .then(salt => bcrypt.hash(password, salt))
+      .then(hashedPassword => {
+        // Create a user and save it in the database
+        return User.create({
+          username,
+          password: hashedPassword,
+        });
+      })
+      .then(user => {
+        Session.create({
+          user: user._id,
+          createdAt: Date.now(),
+        }).then(session => {
+          res.status(201).json({ user, accessToken: session._id });
+        });
+      })
+      .catch(error => {
+        if (error instanceof mongoose.Error.ValidationError) {
+          return res.status(400).json({ errorMessage: error.message });
+        }
+        if (error.code === 11000) {
+          return res.status(400).json({
+            errorMessage:
+              'Username need to be unique. The username you chose is already in use.',
+          });
+        }
+        return res.status(500).json({ errorMessage: error.message });
+      });
+  });
 });
 
 /* ------------ LOGIN ------------ */
 
-// POST  /auth/login - Verifies email and password and returns a JWT
-router.post('/login', (req, res, next) => {
-  const { email, password } = req.body;
+// POST  /auth/login - Verifies username and password and returns a JWT
+router.post('/login', isLoggedOut, (req, res, next) => {
+  const { username, password } = req.body;
 
-  // Check if email o+r password are provided as empty string
-  if (email === '' || password === '') {
-    res.status(400).json({ message: 'Provide email and password.' });
-    return;
+  if (!username) {
+    return res
+      .status(400)
+      .json({ errorMessage: 'Please provide your username.' });
   }
 
-  // Check the users collection if a user with the same email exists
-  User.findOne({ email })
-    .then(foundUser => {
-      if (!foundUser) {
-        // If the user is not found, send an error response
-        res.status(401).json({ message: 'User not found.' });
-        return;
+  // Here we use the same logic as above
+  // - either length based parameters or we check the strength of a password
+  if (password.length < 8) {
+    return res.status(400).json({
+      errorMessage: 'Your password needs to be at least 8 characters long.',
+    });
+  }
+
+  // Search the database for a user with the username submitted in the form
+  User.findOne({ username })
+    .then(user => {
+      // If the user isn't found, send the message that user provided wrong credentials
+      if (!user) {
+        return res.status(400).json({ errorMessage: 'Wrong credentials.' });
       }
 
-      // Compare the provided password with the one saved in the database
-      const passwordCorrect = bcrypt.compareSync(password, foundUser.password);
-
-      if (passwordCorrect) {
-        // Deconstruct the user object to omit the password
-        const { _id, email, username } = foundUser;
-
-        // Create an object that will be set as the token payload
-        const payload = { _id, email, username };
-
-        // Create and sign the token
-        const authToken = jwt.sign(payload, process.env.TOKEN_SECRET, {
-          algorithm: 'HS256',
-          expiresIn: '6h',
-        });
-
-        // Send the token as the response
-        res.status(200).json({ authToken: authToken });
-      } else {
-        res.status(401).json({ message: 'Unable to authenticate the user' });
-      }
+      // If user is found based on the username, check if the in putted password matches the one saved in the database
+      bcrypt.compare(password, user.password).then(isSamePassword => {
+        if (!isSamePassword) {
+          return res.status(400).json({ errorMessage: 'Wrong credentials.' });
+        }
+        Session.create({ user: user._id, createdAt: Date.now() }).then(
+          session => {
+            return res.json({ user, accessToken: session._id });
+          }
+        );
+      });
     })
-    .catch(err => res.status(500).json({ message: 'Internal Server Error' }));
+
+    .catch(err => {
+      // in this case we are sending the error handling to the error handling middleware that is defined in the error handling file
+      // you can just as easily run the res.status that is commented out below
+      next(err);
+      // return res.status(500).render("login", { errorMessage: err.message });
+    });
 });
 
-// GET  /auth/verify  -  (route for integration with the React app) Used to verify JWT stored on the client
-router.get('/verify', isAuthenticated, (req, res, next) => {
-  // If JWT token is valid the payload gets decoded by the
-  // isAuthenticated middleware and made available on `req.payload`
-  console.log(`req.payload`, req.payload);
+/* ------------ LOGOUT ------------ */
 
-  // Send back the object with user data
-  // previously set as the token payload
-  res.status(200).json(req.payload);
+router.delete('/logout', isLoggedIn, (req, res) => {
+  Session.findByIdAndDelete(req.headers.authorization)
+    .then(() => {
+      res.status(200).json({ message: 'User was logged out' });
+    })
+    .catch(err => {
+      console.log(err);
+      res.status(500).json({ errorMessage: err.message });
+    });
 });
 
 module.exports = router;
