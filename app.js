@@ -5,7 +5,7 @@ require('dotenv/config');
 // ℹ️ Connects to the database
 require('./db');
 
-const isLoggedIn = require('../middleware/isLoggedIn');
+const isLoggedIn = require('../server/middleware/isLoggedIn');
 
 // Handles http requests (express is node js framework)
 // https://www.npmjs.com/package/express
@@ -18,10 +18,12 @@ require('./config')(app);
 
 // 👇 Start handling routes here
 
-const allRoutes = require('./routes/movements.routes');
 // whenever I make a request to:
-app.use('/api/movements', isLoggedIn, allRoutes);
+
 // it routes to movements.routes.js => (router.get('/')
+
+const movementsRouter = require('./routes/movements.routes');
+app.use('/api', isLoggedIn, movementsRouter);
 
 const authRouter = require('./routes/auth.routes');
 app.use('/auth', authRouter);

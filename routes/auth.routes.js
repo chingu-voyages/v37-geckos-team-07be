@@ -1,8 +1,11 @@
-const express = require('express');
+const router = require('express').Router();
 
 // ℹ️ Handles password encryption
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
+
+// How many rounds should bcrypt run the salt
+const saltRounds = 10;
 
 // Require the User model in order to interact with the database
 const User = require('../models/User.model');
@@ -12,8 +15,7 @@ const Session = require('../models/Session.model');
 const isLoggedOut = require('../middleware/isLoggedOut');
 const isLoggedIn = require('../middleware/isLoggedIn');
 
-const router = express.Router();
-const saltRounds = 10;
+// ----- ROUTES ------ //
 
 router.get('/session', (req, res) => {
   // we don't want to throw an error, and just maintain the user as null
@@ -40,7 +42,7 @@ router.post('/signup', isLoggedOut, (req, res, next) => {
   const { username, email, password } = req.body;
 
   // Check if email or password or name are provided as empty string
-  if (email === '' || password === '' || username === '') {
+  if (username === '' || email === '' || password === '') {
     res.status(400).json({ message: 'Provide email, password and name' });
     return;
   }
