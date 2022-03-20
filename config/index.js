@@ -21,10 +21,11 @@ module.exports = app => {
 
   // controls a very specific header to pass headers from the frontend
   app.use(
-    cors({
-      credentials: true,
-      origin: process.env.ORIGIN || 'http://localhost:3000',
-    })
+    // cors({
+    //   credentials: true,
+    //   origin: process.env.ORIGIN || 'http://localhost:3000',
+    // })
+    cors()
   );
 
   // In development environment the app logs
